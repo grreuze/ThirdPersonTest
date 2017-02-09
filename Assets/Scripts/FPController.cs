@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 public class FPController : MonoBehaviour {
 
     public Transform rotator; // Used to get the rotation of the camera
-    public float walkForce = 3, runForce = 6, hSpeed = 3, gravity = 10, fallToDeath = 3;
+    public float walkForce = 3, hSpeed = 3, gravity = 10, fallToDeath = 3;
 
     float xForce, zForce, distToGround, falling;
     Vector3 direction;
@@ -13,14 +13,6 @@ public class FPController : MonoBehaviour {
 
     bool isGrounded {
         get { return Physics.Raycast(transform.position, -Vector3.up, distToGround + .1f); }
-    }
-    float force {
-        get {
-            if (Input.GetMouseButton(1)) {
-                Cursor.lockState = CursorLockMode.Locked;
-                return runForce;
-            } else return walkForce;
-        }
     }
 
     void Start() {
@@ -45,8 +37,8 @@ public class FPController : MonoBehaviour {
             if (falling >= fallToDeath) ReloadScene();
         }
 
-        xForce = Input.GetAxis("Horizontal") * force;
-        zForce = Input.GetAxis("Vertical") * force;
+        xForce = Input.GetAxis("Horizontal") * walkForce;
+        zForce = Input.GetAxis("Vertical") * walkForce;
         
         if (xForce + zForce != 0) {
             transform.rotation = rotator.rotation;
