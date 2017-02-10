@@ -18,7 +18,8 @@ public class WorldWrapper : MonoBehaviour {
     void InstantiateCopies() {
         
         Transform world = Instantiate(transform);
-        Vector3 pos = world.position;
+        Vector3 worldPos = world.position;
+        Vector3 pos = worldPos;
         RemoveUselessComponents(world);
 
         int copiesOnFullAxe = numberOfRepetitions * 2 + 1;
@@ -31,18 +32,16 @@ public class WorldWrapper : MonoBehaviour {
         Transform cloneParent = cloneMaster.transform;
         
         for (int xIndex = 0; xIndex < copiesPerAxe.x; xIndex++) {
-            if (repeatAxes.x) pos.x = (xIndex - numberOfRepetitions) * worldSize.x;
+            if (repeatAxes.x) pos.x = worldPos.x + (xIndex - numberOfRepetitions) * worldSize.x;
 
             for (int yIndex = 0; yIndex < copiesPerAxe.y; yIndex++) {
-                if (repeatAxes.y) pos.y = (yIndex - numberOfRepetitions) * worldSize.y;
+                if (repeatAxes.y) pos.y = worldPos.y + (yIndex - numberOfRepetitions) * worldSize.y;
 
                 for (int zIndex = 0; zIndex < copiesPerAxe.z; zIndex++) {
-                    if (repeatAxes.z) pos.z = (zIndex - numberOfRepetitions) * worldSize.z;
+                    if (repeatAxes.z) pos.z = worldPos.z + (zIndex - numberOfRepetitions) * worldSize.z;
 
                     // Skip the center instance since it's the original world
-                    if (pos == Vector3.zero) continue;
-
-                    int index = xIndex * copiesOnFullAxe*copiesOnFullAxe + yIndex * copiesOnFullAxe + zIndex;
+                    if (pos == worldPos) continue;
                     Instantiate(world, pos, Quaternion.identity, cloneParent);
                 }
             }

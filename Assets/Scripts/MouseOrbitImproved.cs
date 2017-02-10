@@ -5,7 +5,7 @@ public class MouseOrbitImproved : MonoBehaviour {
 
     public Transform target;
 
-    public float distance = 5.0f;
+    public float distance = 12, idealDistance = 12;
     public float xSpeed = 15, ySpeed = 15;
 
     public float yMinLimit = -20f;
@@ -18,13 +18,12 @@ public class MouseOrbitImproved : MonoBehaviour {
 
     public float smooth = 4;
 
-    Vector3 camPosition;
+    Vector3 camPosition, negDistance;
     Quaternion camRotation;
 
     float x = 0.0f;
     float y = 0.0f;
-
-    // Use this for initialization
+    
     void Start() {
         Vector3 angles = transform.eulerAngles;
         x = angles.y;
@@ -40,27 +39,29 @@ public class MouseOrbitImproved : MonoBehaviour {
                 x += Input.GetAxis("Mouse X") * xSpeed * distance * 0.02f;
             }
             
-
             y -= Input.GetAxis("Mouse Y") * ySpeed * distance * 0.02f;
 
             y = ClampAngle(y, yMinLimit, yMaxLimit);
 
             Quaternion rotation = Quaternion.Euler(y, x, 0);
 
-            distance = Mathf.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * 5, distanceMin, distanceMax);
+            if (canZoom) {
+                distance = Mathf.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * 5, distanceMin, distanceMax);
+            }
 
             RaycastHit hit;
             if (Physics.Linecast(target.position, transform.position, out hit)) {
                 distance -= hit.distance;
             }
-            smoothMovement();
-
-            Vector3 negDistance = new Vector3(0.0f, 0.0f, -distance);
+            // Reset distance to Ideal Distance somehow??
+            negDistance.z = -distance;
             Vector3 position = rotation * negDistance + target.position;
 
             camRotation = rotation;
             camPosition = position;
-            
+
+            smoothMovement();
+
             target.rotation = Quaternion.Euler(0, x, 0); // Reoriente the character's rotator
         }
     }
