@@ -1,78 +1,89 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
+[AddComponentMenu("Camera-Control/Mouse Orbit with zoom")]
 public class ThirdPersonCamera : MonoBehaviour {
 
-    [Header("Camera Properties")]
-    public float DistanceAway;                     //how far the camera is from the player.
-    public float DistanceUp;                    //how high the camera is above the player
-    public float smooth = 4.0f;                    //how smooth the camera moves into place
-    public float rotateAround = 70f;            //the angle at which you will rotate the camera (on an axis)
+    public Transform target;
 
-    [Header("Player to follow")]
-    public Transform target;                    //the target the camera follows
+    public float distance = 12, idealDistance = 12;
 
-    [Header("Layer(s) to include")]
-    public LayerMask CamOcclusion;                //the layers that will be affected by collision
+    public Vector2 speed = new Vector2(15, 15);
+    public MinMax pitchRotationLimit = new MinMax(-20, 80);
+
+    public float yOffsetFar = 2, yOffsetClose = 0;
+
+    public float reactionTime = 10;
+
+    [Header("Zoom")]
+    public bool canZoom;
+    public float zoomSpeed = 5;
+    public MinMax zoomDistance = new MinMax(2, 12);
     
-    RaycastHit hit;
-    float cameraHeight = 55f;
-    float cameraPan = 0f;
-    float camRotateSpeed = 180f;
-    Vector3 camPosition;
-    Vector3 camMask;
-    Vector3 followMask;
+    Vector3 camPosition, negDistance;
+    Quaternion camRotation;
 
-    // Use this for initialization
+    float x, y;
+    float maxDistance;
+    
     void Start() {
-        //the statement below automatically positions the camera behind the target.
-        rotateAround = target.eulerAngles.y - 45f;
+        Vector3 angles = transform.eulerAngles;
+        x = angles.y;
+        y = angles.x;
+        camPosition = transform.position;
+
+        maxDistance = canZoom ? zoomDistance.max : idealDistance;
     }
 
     void LateUpdate() {
-        //Offset of the targets transform (Since the pivot point is usually at the feet).
-        Vector3 targetOffset = new Vector3(target.position.x, (target.position.y + 2f), target.position.z);
-        Quaternion rotation = Quaternion.Euler(cameraHeight, rotateAround, cameraPan);
-        Vector3 vectorMask = Vector3.one;
-        Vector3 rotateVector = rotation * vectorMask;
-        //this determines where both the camera and it's mask will be.
-        //the camMask is for forcing the camera to push away from walls.
-        camPosition = targetOffset + Vector3.up * DistanceUp - rotateVector * DistanceAway;
-        camMask = targetOffset + Vector3.up * DistanceUp - rotateVector * DistanceAway;
+        if (target) {
+            Vector3 position = transform.position;
 
-        occludeRay(ref targetOffset);
-        smoothCamMethod();
+            float clampedX = Mathf.Clamp(Input.GetAxis("Mouse X"), -10, 10); // Avoid going too fast (makes weird lerp)
+            x += clampedX * speed.x * distance * 0.02f;
+            y -= Input.GetAxis("Mouse Y") * speed.y * distance * 0.02f;
+            y = pitchRotationLimit.Clamp(y);
 
-        transform.LookAt(target);
+            Quaternion rotation = Quaternion.Euler(y, x, 0);
 
-        #region wrap the cam orbit rotation
-        if (rotateAround > 360) {
-            rotateAround = 0f;
-        } else if (rotateAround < 0f) {
-            rotateAround = (rotateAround + 360f);
+            if (canZoom && Input.GetAxis("Mouse ScrollWheel") != 0) {
+                idealDistance = zoomDistance.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * zoomSpeed);
+            }
+
+            RaycastHit hit;
+            if (Physics.Linecast(target.position, position, out hit)) {
+                distance = hit.distance;
+            } else {
+                distance = Mathf.Lerp(distance, idealDistance, Time.deltaTime * reactionTime);
+            }
+            negDistance.z = -distance;
+
+            float yOffset = Mathf.Lerp(yOffsetClose, yOffsetFar, distance / maxDistance);
+
+            Vector3 newPosition = rotation * negDistance + target.position;
+
+
+            camRotation = rotation;
+            //camPosition = newPosition;
+            camPosition = newPosition + transform.up * yOffset;
+
+
+            smoothMovement();
+
+            target.rotation = Quaternion.Euler(0, x, 0); // Reoriente the character's rotator
         }
-        #endregion
+    }
 
-        rotateAround += Input.GetAxis("Mouse X") * camRotateSpeed * Time.deltaTime;
-        DistanceUp = Mathf.Clamp(DistanceUp += Input.GetAxis("Mouse Y"), -0.79f, 2.3f);
+    void smoothMovement() {
+        float t = Time.deltaTime * reactionTime;
+        transform.position = Vector3.Lerp(transform.position, camPosition, t);
+        transform.rotation = Quaternion.Lerp(transform.rotation, camRotation, t);
     }
-    void smoothCamMethod() {
-        smooth = 4f;
-        transform.position = Vector3.Lerp(transform.position, camPosition, Time.deltaTime * smooth);
-    }
-    void occludeRay(ref Vector3 targetFollow) {
-        #region prevent wall clipping
-        //declare a new raycast hit.
-        RaycastHit wallHit = new RaycastHit();
-        //linecast from your player (targetFollow) to your cameras mask (camMask) to find collisions.
-        if (Physics.Linecast(targetFollow, camMask, out wallHit, CamOcclusion)) {
-            //the smooth is increased so you detect geometry collisions faster.
-            smooth = 10f;
-            //the x and z coordinates are pushed away from the wall by hit.normal.
-            //the y coordinate stays the same.
-            camPosition = new Vector3(wallHit.point.x + wallHit.normal.x * 0.5f, camPosition.y, wallHit.point.z + wallHit.normal.z * 0.5f);
-        }
-        #endregion
+
+    public static float ClampAngle(float angle, float min, float max) {
+        if (angle < -360F)
+            angle += 360F;
+        if (angle > 360F)
+            angle -= 360F;
+        return Mathf.Clamp(angle, min, max);
     }
 }
