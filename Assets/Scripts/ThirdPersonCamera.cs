@@ -2,79 +2,91 @@
 
 [AddComponentMenu("Camera-Control/Mouse Orbit with zoom")]
 public class ThirdPersonCamera : MonoBehaviour {
-
+    
+    [Header("Position")]
     public Transform target;
-
-    public float distance = 12, idealDistance = 12;
-
-    public Vector2 speed = new Vector2(15, 15);
-    public MinMax pitchRotationLimit = new MinMax(-20, 80);
-
+    public float distance = 12;
     public float yOffsetFar = 2, yOffsetClose = 0;
 
-    public float reactionTime = 10;
+    [Header("Movement")]
+    public Vector2 rotationSpeed = new Vector2(15, 15);
+    public Vector2 mouseSpeedLimit = new Vector2(10, 10);
+    public MinMax pitchRotationLimit = new MinMax(-20, 80);
+    public bool smoothMovement = true;
+    public float cameraSpeed = 10; // this name is bad
 
+    #region Zoom
     [Header("Zoom")]
     public bool canZoom;
     public float zoomSpeed = 5;
     public MinMax zoomDistance = new MinMax(2, 12);
-    
+
+    void Zoom(float value) {
+        if (value != 0) idealDistance = zoomDistance.Clamp(distance - value * zoomSpeed);
+    }
+    #endregion
+
     Vector3 camPosition, negDistance;
     Quaternion camRotation;
 
     float x, y;
-    float maxDistance;
+    float maxDistance, idealDistance;
     
     void Start() {
+        Cursor.lockState = CursorLockMode.Locked;
+
         Vector3 angles = transform.eulerAngles;
         x = angles.y;
         y = angles.x;
         camPosition = transform.position;
 
+        idealDistance = distance;
         maxDistance = canZoom ? zoomDistance.max : idealDistance;
+    }
+
+    void OnApplicationFocus(bool hasFocus) {
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void LateUpdate() {
         if (target) {
             Vector3 position = transform.position;
 
-            float clampedX = Mathf.Clamp(Input.GetAxis("Mouse X"), -10, 10); // Avoid going too fast (makes weird lerp)
-            x += clampedX * speed.x * distance * 0.02f;
-            y -= Input.GetAxis("Mouse Y") * speed.y * distance * 0.02f;
+            float clampedX = Mathf.Clamp(Input.GetAxis("Mouse X"), -mouseSpeedLimit.x, mouseSpeedLimit.x); // Avoid going too fast (makes weird lerp)
+            x += clampedX * rotationSpeed.x * distance * 0.02f;
+
+            float clampedY = Mathf.Clamp(Input.GetAxis("Mouse Y"), -mouseSpeedLimit.y, mouseSpeedLimit.y); // Avoid going too fast (makes weird lerp)
+            y -= clampedY * rotationSpeed.y * distance * 0.02f;
             y = pitchRotationLimit.Clamp(y);
 
             Quaternion rotation = Quaternion.Euler(y, x, 0);
 
-            if (canZoom && Input.GetAxis("Mouse ScrollWheel") != 0) {
-                idealDistance = zoomDistance.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * zoomSpeed);
-            }
+            if (canZoom) Zoom(Input.GetAxis("Mouse ScrollWheel"));
 
             RaycastHit hit;
-            if (Physics.Linecast(target.position, position, out hit)) {
+            if (Physics.Linecast(target.position, position, out hit) 
+                && hit.transform.tag != "Player"
+                && !hit.collider.isTrigger) {
+
                 distance = hit.distance;
             } else {
-                distance = Mathf.Lerp(distance, idealDistance, Time.deltaTime * reactionTime);
+                distance = Mathf.Lerp(distance, idealDistance, Time.deltaTime * cameraSpeed);
             }
             negDistance.z = -distance;
 
             float yOffset = Mathf.Lerp(yOffsetClose, yOffsetFar, distance / maxDistance);
-
-            Vector3 newPosition = rotation * negDistance + target.position;
-
-
+            
             camRotation = rotation;
-            //camPosition = newPosition;
-            camPosition = newPosition + transform.up * yOffset;
-
-
-            smoothMovement();
+            camPosition = rotation * negDistance + target.position + transform.up * yOffset;
+            
+            SmoothMovement();
 
             target.rotation = Quaternion.Euler(0, x, 0); // Reoriente the character's rotator
         }
     }
 
-    void smoothMovement() {
-        float t = Time.deltaTime * reactionTime;
+    void SmoothMovement() {
+        float t = smoothMovement ? Time.deltaTime * cameraSpeed : 1;
         transform.position = Vector3.Lerp(transform.position, camPosition, t);
         transform.rotation = Quaternion.Lerp(transform.rotation, camRotation, t);
     }
