@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 public class ThirdPersonController : MonoBehaviour {
 
     public Transform rotator; // Used to get the rotation of the camera
-    public float walkForce = 3, hSpeed = 3, gravity = 10;
+    public float walkForce = 3, rotationSpeed = 12, hSpeed = 3, gravity = 10;
 
     float xForce, zForce, distToGround, falling;
     Vector3 direction;
@@ -41,7 +41,7 @@ public class ThirdPersonController : MonoBehaviour {
         zForce = Input.GetAxis("Vertical") * walkForce;
         
         if (xForce + zForce != 0) {
-            transform.rotation = rotator.rotation;
+            transform.rotation = Quaternion.Lerp(transform.rotation, rotator.rotation, Time.deltaTime * rotationSpeed);
         }
 
         direction = transform.TransformDirection(new Vector3(xForce * Time.deltaTime, 0, zForce * Time.deltaTime));
