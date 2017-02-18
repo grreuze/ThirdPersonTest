@@ -8,6 +8,16 @@ public class ThirdPersonCamera : MonoBehaviour {
     public float distance = 12;
     public Vector2 offsetFar = new Vector2(0, 2),
                    offsetClose = new Vector2(2, 0);
+    #region Temporary Offset
+        Vector2 _tempOffset;
+        bool offsetOverriden;
+        public Vector2 temporaryOffset {
+            set {
+                _tempOffset = value;
+                offsetOverriden = true;
+            }
+        }
+    #endregion
 
     [Header("Movement")]
     public Vector2 rotationSpeed = new Vector2(15, 15);
@@ -67,13 +77,26 @@ public class ThirdPersonCamera : MonoBehaviour {
             if (canZoom) Zoom(Input.GetAxis("Mouse ScrollWheel"));
 
             CheckForCollision();
-
-            negDistance.z = -distance;
+            
             offset.x = Mathf.Lerp(offsetClose.x, offsetFar.x, distance / maxDistance);
             offset.y = Mathf.Lerp(offsetClose.y, offsetFar.y, distance / maxDistance);
-            
+
+            Vector3 targetPosition = target.position;
+
+            if (offsetOverriden) {
+                targetPosition.x += _tempOffset.x;
+                targetPosition.y += _tempOffset.y;
+                _tempOffset = Vector2.Lerp(_tempOffset, Vector2.zero, Time.deltaTime * cameraSpeed);
+                if (Vector2.Distance(_tempOffset, Vector2.zero) < .01f)
+                    offsetOverriden = false;
+            }
+
+            Vector3 targetWithOffset = targetPosition + my.right * offset.x + my.up * offset.y;
+
+            negDistance.z = -distance;
+
             camRotation = rotation;
-            camPosition = rotation * negDistance + target.position + my.right * offset.x + my.up * offset.y;
+            camPosition = rotation * negDistance + targetWithOffset;
             
             SmoothMovement();
 
@@ -96,8 +119,8 @@ public class ThirdPersonCamera : MonoBehaviour {
 
     void SmoothMovement() {
         float t = smoothMovement ? Time.deltaTime * cameraSpeed : 1;
-        my.position = Vector3.Lerp(my.position, camPosition, t);
-        my.rotation = Quaternion.Lerp(my.rotation, camRotation, t);
+        my.position = Vector3.Slerp(my.position, camPosition, t);
+        my.rotation = Quaternion.Slerp(my.rotation, camRotation, t);
     }
 
     public static float ClampAngle(float angle, float min, float max) {

@@ -4,49 +4,87 @@ using UnityEngine.SceneManagement;
 public class ThirdPersonController : MonoBehaviour {
 
     public Transform rotator; // Used to get the rotation of the camera
-    public float walkForce = 3, rotationSpeed = 12, hSpeed = 3, gravity = 10;
 
-    float xForce, zForce, distToGround, falling;
+    [Header("Movement")]
+    public float walkForce = 700;
+    public float rotationSpeed = 12;
+
+    [Header("Jump")]
+    public float jumpSpeed = .06f;
+    public float gravity = .2f;
+    public float maxFallingSpeed = .06f;
+
+    float xForce, zForce;
+    float jumpForce;
     Vector3 direction;
+    Vector3 distToGround;
+
+
+    new ThirdPersonCamera camera;
+
     CharacterController controller;
     GameObject platform;
+    Rigidbody rb;
 
-    bool isGrounded {
-        get { return Physics.Raycast(transform.position, -Vector3.up, distToGround + .1f); }
-    }
+    bool jumping;
+    float verticalVelocity;
+    bool isGrounded;
+    float reachedMaxSpeed;
 
     void Start() {
+        camera = FindObjectOfType<ThirdPersonCamera>();
+
         controller = GetComponent<CharacterController>();
-        distToGround = GetComponent<Collider>().bounds.extents.y;
-        falling = 0;
+        rb = GetComponent<Rigidbody>();
+        distToGround.y = - (GetComponent<Collider>().bounds.extents.y + .1f);
+        jumpForce = jumpSpeed;
     }
 
     void ReloadScene() {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    void Update() {
+    #region Impact
+    public float fallImpact = 8;
+    public MinMax impact = new MinMax(0.7f, 3);
 
-        if (isGrounded) {
-            falling = 0;
-            if (Input.GetButton("Jump"))
-                print("jump");
+    void Impact() {
+        if (reachedMaxSpeed > 0) {
+            float impactStrength = Mathf.Min(reachedMaxSpeed * fallImpact + impact.min, impact.max);
+            camera.temporaryOffset = new Vector2(0, -impactStrength);
         }
-        else {
-            falling += Time.deltaTime;
-
-        }
-
-        xForce = Input.GetAxis("Horizontal") * walkForce;
-        zForce = Input.GetAxis("Vertical") * walkForce;
-        
-        if (xForce + zForce != 0) {
-            transform.rotation = Quaternion.Lerp(transform.rotation, rotator.rotation, Time.deltaTime * rotationSpeed);
-        }
-
-        direction = transform.TransformDirection(new Vector3(xForce * Time.deltaTime, 0, zForce * Time.deltaTime));
-        direction.y -= gravity * Time.deltaTime;
-        controller.Move(direction);
     }
+    #endregion
 
+    float deltaTime;
+    void Update() {
+        deltaTime = Time.deltaTime;
+
+        reachedMaxSpeed = verticalVelocity <= -maxFallingSpeed ? reachedMaxSpeed + deltaTime : 0;
+
+        if (controller.isGrounded) {
+            Impact();
+
+            verticalVelocity = -gravity * deltaTime;
+            if (Input.GetKeyDown(KeyCode.Space)) {
+                verticalVelocity = jumpSpeed;
+            }
+        } else if (reachedMaxSpeed == 0) {
+            verticalVelocity -= gravity * deltaTime;
+        }
+
+        xForce = Input.GetAxis("Horizontal");
+        zForce = Input.GetAxis("Vertical");
+        if (xForce != 0 || zForce != 0) {
+            transform.rotation = Quaternion.Lerp(transform.rotation, rotator.rotation, deltaTime * rotationSpeed);
+        }
+        direction.x = xForce * deltaTime;
+        direction.y = verticalVelocity;
+        direction.z = zForce * deltaTime;
+        direction = transform.TransformDirection(direction) * walkForce;
+        
+        controller.Move(direction * deltaTime);
+
+        isGrounded = Physics.Linecast(transform.position, transform.position + distToGround);
+    }
 }
