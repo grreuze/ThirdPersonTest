@@ -65,18 +65,16 @@ public class ThirdPersonCamera : MonoBehaviour {
 
     void LateUpdate() {
         if (target) {
-            float clampedX = Mathf.Clamp(Input.GetAxis("Mouse X"), -mouseSpeedLimit.x, mouseSpeedLimit.x); // Avoid going too fast (makes weird lerp)
+            float clampedX = Mathf.Clamp(Input.GetAxis("Mouse X") * (idealDistance/distance), -mouseSpeedLimit.x, mouseSpeedLimit.x); // Avoid going too fast (makes weird lerp)
             yaw += clampedX * rotationSpeed.x * distance * 0.02f;
 
-            float clampedY = Mathf.Clamp(Input.GetAxis("Mouse Y"), -mouseSpeedLimit.y, mouseSpeedLimit.y); // Avoid going too fast (makes weird lerp)
+            float clampedY = Mathf.Clamp(Input.GetAxis("Mouse Y") * (idealDistance/distance), -mouseSpeedLimit.y, mouseSpeedLimit.y); // Avoid going too fast (makes weird lerp)
             pitch -= clampedY * rotationSpeed.y * distance * 0.02f;
             pitch = pitchRotationLimit.Clamp(pitch);
 
             Quaternion rotation = Quaternion.Euler(pitch, yaw, 0);
 
             if (canZoom) Zoom(Input.GetAxis("Mouse ScrollWheel"));
-
-            CheckForCollision();
             
             offset.x = Mathf.Lerp(offsetClose.x, offsetFar.x, distance / maxDistance);
             offset.y = Mathf.Lerp(offsetClose.y, offsetFar.y, distance / maxDistance);
@@ -90,12 +88,13 @@ public class ThirdPersonCamera : MonoBehaviour {
                 if (Vector2.Distance(_tempOffset, Vector2.zero) < .01f)
                     offsetOverriden = false;
             }
+            
+            camRotation = rotation;
 
-            Vector3 targetWithOffset = targetPosition + my.right * offset.x + my.up * offset.y;
+            CheckForCollision();
 
             negDistance.z = -distance;
-
-            camRotation = rotation;
+            Vector3 targetWithOffset = targetPosition + my.right * offset.x + my.up * offset.y;
             camPosition = rotation * negDistance + targetWithOffset;
             
             SmoothMovement();

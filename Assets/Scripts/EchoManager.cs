@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Collections;
 using UnityEngine;
 
 public class EchoManager : MonoBehaviour {
@@ -13,7 +12,10 @@ public class EchoManager : MonoBehaviour {
     [HideInInspector]
     public Transform pool;
 
+    new EchoCameraEffect camera;
+
     void Start() {
+        camera = Camera.main.GetComponent<EchoCameraEffect>();
         pool = new GameObject().transform;
         pool.name = "Echo Pool";
     }
@@ -22,8 +24,10 @@ public class EchoManager : MonoBehaviour {
 		
         // Drift
         if (Input.GetKeyUp(KeyCode.A)) {
-            if (echoes.Count > 0)
+            if (echoes.Count > 0) {
+                camera.SetFov(70, 0.15f, true);
                 transform.position = echoes[echoes.Count - 1].transform.position;
+            }
         }
 
         // Echo

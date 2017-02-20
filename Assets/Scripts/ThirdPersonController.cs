@@ -10,6 +10,7 @@ public class ThirdPersonController : MonoBehaviour {
     public float rotationSpeed = 12;
 
     [Header("Jump")]
+    public int numberOfJumps = 1;
     public float jumpSpeed = .06f;
     public float gravity = .2f;
     public float maxFallingSpeed = .06f;
@@ -18,15 +19,13 @@ public class ThirdPersonController : MonoBehaviour {
     float jumpForce;
     Vector3 direction;
     Vector3 distToGround;
-
-
+    
     new ThirdPersonCamera camera;
 
     CharacterController controller;
     GameObject platform;
     Rigidbody rb;
-
-    bool jumping;
+    
     float verticalVelocity;
     bool isGrounded;
     float reachedMaxSpeed;
@@ -44,15 +43,26 @@ public class ThirdPersonController : MonoBehaviour {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    #region Jump
+    int jumpsRemaining;
+
+    void Jump() {
+        if (jumpsRemaining == numberOfJumps && !controller.isGrounded)
+            jumpsRemaining--; // The first jump can only be done on the ground
+        if (jumpsRemaining > 0) {
+            jumpsRemaining--;
+            verticalVelocity = jumpSpeed;
+        }
+    }
+    #endregion
+
     #region Impact
     public float fallImpact = 8;
     public MinMax impact = new MinMax(0.7f, 3);
 
     void Impact() {
-        if (reachedMaxSpeed > 0) {
-            float impactStrength = Mathf.Min(reachedMaxSpeed * fallImpact + impact.min, impact.max);
-            camera.temporaryOffset = new Vector2(0, -impactStrength);
-        }
+        float impactStrength = Mathf.Min(reachedMaxSpeed * fallImpact + impact.min, impact.max);
+        camera.temporaryOffset = new Vector2(0, -impactStrength);
     }
     #endregion
 
@@ -62,22 +72,24 @@ public class ThirdPersonController : MonoBehaviour {
 
         reachedMaxSpeed = verticalVelocity <= -maxFallingSpeed ? reachedMaxSpeed + deltaTime : 0;
 
-        if (controller.isGrounded) {
-            Impact();
+        if (Input.GetKeyDown(KeyCode.Space) && jumpsRemaining > 0) 
+            Jump();
+
+        else if (controller.isGrounded) {
+            jumpsRemaining = numberOfJumps;
+            if (reachedMaxSpeed > 0)
+                Impact();
 
             verticalVelocity = -gravity * deltaTime;
-            if (Input.GetKeyDown(KeyCode.Space)) {
-                verticalVelocity = jumpSpeed;
-            }
-        } else if (reachedMaxSpeed == 0) {
+
+        } else if (reachedMaxSpeed == 0) 
             verticalVelocity -= gravity * deltaTime;
-        }
 
         xForce = Input.GetAxis("Horizontal");
         zForce = Input.GetAxis("Vertical");
-        if (xForce != 0 || zForce != 0) {
+        if (xForce != 0 || zForce != 0) // If we are moving, rotate in the direction of the camera
             transform.rotation = Quaternion.Lerp(transform.rotation, rotator.rotation, deltaTime * rotationSpeed);
-        }
+        
         direction.x = xForce * deltaTime;
         direction.y = verticalVelocity;
         direction.z = zForce * deltaTime;
