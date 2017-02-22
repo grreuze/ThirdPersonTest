@@ -96,7 +96,9 @@ public class ThirdPersonCamera : MonoBehaviour {
             negDistance.z = -distance;
             Vector3 targetWithOffset = targetPosition + my.right * offset.x + my.up * offset.y;
             camPosition = rotation * negDistance + targetWithOffset;
-            
+
+            //my.LookAt(targetWithOffset);
+
             SmoothMovement();
 
             target.rotation = Quaternion.Euler(0, yaw, 0); // Reoriente the character's rotator

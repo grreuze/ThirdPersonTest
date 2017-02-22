@@ -76,10 +76,11 @@ public class ThirdPersonController : MonoBehaviour {
             Jump();
 
         else if (controller.isGrounded) {
-            jumpsRemaining = numberOfJumps;
+
             if (reachedMaxSpeed > 0)
                 Impact();
 
+            jumpsRemaining = numberOfJumps;
             verticalVelocity = -gravity * deltaTime;
 
         } else if (reachedMaxSpeed == 0) 
