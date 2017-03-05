@@ -120,8 +120,8 @@ public class ThirdPersonCamera : MonoBehaviour {
 
     void SmoothMovement() {
         float t = smoothMovement ? Time.deltaTime * cameraSpeed : 1;
-        my.position = Vector3.Slerp(my.position, camPosition, t);
-        my.rotation = Quaternion.Slerp(my.rotation, camRotation, t);
+        my.localPosition = Vector3.Slerp(my.localPosition, camPosition, t);
+        my.localRotation = Quaternion.Slerp(my.localRotation, camRotation, t);
     }
 
     public static float ClampAngle(float angle, float min, float max) {
