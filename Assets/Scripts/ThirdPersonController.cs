@@ -11,12 +11,11 @@ public class ThirdPersonController : MonoBehaviour {
 
     [Header("Jump")]
     public int numberOfJumps = 1;
-    public float jumpSpeed = .06f;
-    public float gravity = .2f;
-    public float maxFallingSpeed = .06f;
+    public float jumpForce = 5f;
+    public float gravity = 9.8f;
+    public float maxFallingSpeed = 5f;
 
     float xForce, zForce;
-    float jumpForce;
     Vector3 direction;
     Vector3 distToGround;
     
@@ -36,7 +35,6 @@ public class ThirdPersonController : MonoBehaviour {
         controller = GetComponent<CharacterController>();
         rb = GetComponent<Rigidbody>();
         distToGround.y = - (GetComponent<Collider>().bounds.extents.y + .1f);
-        jumpForce = jumpSpeed;
     }
 
     void ReloadScene() {
@@ -51,7 +49,7 @@ public class ThirdPersonController : MonoBehaviour {
             jumpsRemaining--; // The first jump can only be done on the ground
         if (jumpsRemaining > 0) {
             jumpsRemaining--;
-            verticalVelocity = jumpSpeed;
+            verticalVelocity = jumpForce;
         }
     }
     #endregion
@@ -91,12 +89,12 @@ public class ThirdPersonController : MonoBehaviour {
         if (xForce != 0 || zForce != 0) // If we are moving, rotate in the direction of the camera
             transform.rotation = Quaternion.Lerp(transform.rotation, rotator.rotation, deltaTime * rotationSpeed);
         
-        direction.x = xForce * deltaTime;
-        direction.y = verticalVelocity;
-        direction.z = zForce * deltaTime;
+        direction.x = deltaTime * xForce;
+        direction.y = deltaTime * verticalVelocity;
+        direction.z = deltaTime * zForce;
         direction = transform.TransformDirection(direction) * walkForce;
         
-        controller.Move(direction * deltaTime);
+        controller.Move(direction);
 
         isGrounded = Physics.Linecast(transform.position, transform.position + distToGround);
     }
